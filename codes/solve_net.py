@@ -12,11 +12,11 @@ def data_iterator(x, y, batch_size, shuffle=True):
         yield x[indx[start_idx: end_idx]], y[indx[start_idx: end_idx]]
 
 
-def train_net(model, loss, config, inputs, labels, batch_size, disp_freq):
+def train_net(model, loss, config, inputs, labels, batch_size, disp_freq, current_iter_count):
 
     iter_counter = 0
-    loss_list = []
-    acc_list = []
+    loss_value = 0
+    loss_values = []
 
     for input, label in data_iterator(inputs, labels, batch_size):
         target = onehot_encoding(label, 10)
@@ -25,7 +25,7 @@ def train_net(model, loss, config, inputs, labels, batch_size, disp_freq):
         # forward net
         output = model.forward(input)
         # calculate loss
-        loss_value = loss.forward(output, target)
+        loss_value += loss.forward(output, target)
         # generate gradient w.r.t loss
         grad = loss.backward(output, target)
         # backward gradient
@@ -34,28 +34,16 @@ def train_net(model, loss, config, inputs, labels, batch_size, disp_freq):
         # update layers' weights
         model.update(config)
 
-        acc_value = calculate_acc(output, label)
-        loss_list.append(loss_value)
-        acc_list.append(acc_value)
-
         if iter_counter % disp_freq == 0:
-            msg = '  Training iter %d, batch loss %.4f, batch acc %.4f' % (iter_counter, np.mean(loss_list), np.mean(acc_list))
-            loss_list = []
-            acc_list = []
-            LOG_INFO(msg)
+            loss_values.append({'iter': current_iter_count + iter_counter, 'loss': loss_value / disp_freq})
+            loss_value = 0
+    current_iter_count += iter_counter
+    return current_iter_count, loss_values
 
 
 def test_net(model, loss, inputs, labels, batch_size):
-    loss_list = []
-    acc_list = []
 
     for input, label in data_iterator(inputs, labels, batch_size, shuffle=False):
-        target = onehot_encoding(label, 10)
         output = model.forward(input)
-        loss_value = loss.forward(output, target)
         acc_value = calculate_acc(output, label)
-        loss_list.append(loss_value)
-        acc_list.append(acc_value)
-
-    msg = '    Testing, total mean loss %.5f, total acc %.5f' % (np.mean(loss_list), np.mean(acc_list))
-    LOG_INFO(msg)
+    return acc_value

@@ -27,7 +27,8 @@ class Relu(Layer):
 
     def forward(self, input):
         self._saved_for_backward(input)
-        return np.maximum(0, input)
+        self._forward_output = np.maximum(0, input)
+        return self._forward_output
 
     def backward(self, grad_output):
         input = self._saved_tensor

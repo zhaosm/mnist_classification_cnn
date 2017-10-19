@@ -3,5 +3,7 @@ __pycache__/
 *.pyc
 *.pdf
 .idea/
-
+*.csv
+*.png
+*.npz
 

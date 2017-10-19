@@ -4,8 +4,14 @@ from utils import LOG_INFO
 from loss import EuclideanLoss, SoftmaxCrossEntropyLoss
 from solve_net import train_net, test_net
 from load_data import load_mnist_4d
+from datetime import datetime
+import csv
+from solve_net import data_iterator
+import numpy as np
+from output_paths import *
 
 train_data, test_data, train_label, test_label = load_mnist_4d('data')
+img_record_num = 4
 
 # Your model defintion here
 # You should explore different model architecture
@@ -32,15 +38,45 @@ config = {
     'weight_decay': 0.0,
     'momentum': 0.9,
     'batch_size': 100,
-    'max_epoch': 100,
+    'max_epoch': 1,
     'disp_freq': 5,
     'test_epoch': 5
 }
 
-for epoch in range(config['max_epoch']):
-    LOG_INFO('Training @ %d epoch...' % (epoch))
-    train_net(model, loss, config, train_data, train_label, config['batch_size'], config['disp_freq'])
+start = datetime.now()
+display_start = str(start).split(' ')[1][:-3]
+log_list = []
+current_iter_count = 0
 
-    if epoch % config['test_epoch'] == 0:
-        LOG_INFO('Testing @ %d epoch...' % (epoch))
-        test_net(model, loss, test_data, test_label, config['batch_size'])
+
+for epoch in range(config['max_epoch']):
+    current_iter_count, loss_values = train_net(model, loss, config, train_data, train_label, config['batch_size'], config['disp_freq'], current_iter_count)
+    log_list = log_list + loss_values
+    if epoch == config['max_epoch'] - 1:
+        # save conv + relu' s output
+        inputs, labels = data_iterator(train_data, train_label, config['batch_size']).next()
+        model.forward(inputs)
+        batch_conv_output = model.layer_list[1]._forward_output
+        indices = set()
+        for i in range(len(inputs)):
+            if i not in indices and len(indices) < img_record_num:
+                indices.add(i)
+            elif len(indices) == img_record_num:
+                break
+        imgs = [inputs[i] for i in indices]
+        conv_outputs = [batch_conv_output[j] for j in indices]
+        np.savez(img_arrays_path, imgs=imgs, conv_outputs=conv_outputs)
+
+        # test after training
+        acc_value = test_net(model, loss, test_data, test_label, config['batch_size'])
+
+now = datetime.now()
+display_now = str(now).split(' ')[1][:-3]
+logfile = file(logpath, 'wb')
+writer = csv.writer(logfile)
+writer.writerow(['iter', 'loss'])
+data = [(log['iter'], log['loss']) for log in log_list]
+writer.writerows(data)
+data = [(display_start, ), (display_now, ), (acc_value, )]
+writer.writerows(data)
+logfile.close()

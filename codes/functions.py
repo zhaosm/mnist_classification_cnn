@@ -36,15 +36,15 @@ def conv2d_backward(input, input_cols, grad_output, W, b, kernel_size, pad):
         grad_W: gradient of W, shape = c_out (#output channel) x c_in (#input channel) x k (#kernel_size) x k (#kernel_size)
         grad_b: gradient of b, shape = c_out
     '''
-    c_out = grad_output.shape[0]
+    c_out = grad_output.shape[1]
     grad_output_filters = grad_output.transpose(1, 2, 3, 0).reshape(c_out, -1)
-    grad_w = np.matmul(grad_output_filters, input_cols)
+    grad_w = np.matmul(grad_output_filters, input_cols.T)
     grad_w = grad_w.reshape(W.shape)
     grad_input_cols = np.matmul(W.reshape(c_out, -1).T, grad_output_filters)  # (c * kernel_size * kernel_size) * (h * w * n)
     grad_input = col2im_indices(cols=grad_input_cols, x_shape=input.shape, field_height=kernel_size, field_width=kernel_size, padding=pad, stride=1)  # back to input size
     grad_b = np.sum(grad_output, axis=(0, 2, 3)).reshape(c_out, -1)
 
-    return grad_input, grad_w, grad_b
+    return grad_input, grad_w, grad_b.ravel()
 
 
 def avgpool2d_forward(input, input_all_channels_cols, kernel_size, pad):

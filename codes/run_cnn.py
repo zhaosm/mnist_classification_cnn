@@ -58,14 +58,19 @@ for epoch in range(config['max_epoch']):
         model.forward(inputs)
         batch_conv_output = model.layer_list[1]._forward_output
         indices = set()
-        for i in range(len(inputs)):
-            if i not in indices and len(indices) < img_record_num:
+        for i in range(len(labels)):
+            if labels[i] not in indices and len(indices) < img_record_num:
                 indices.add(i)
             elif len(indices) == img_record_num:
                 break
-        imgs = [inputs[i] for i in indices]
-        conv_outputs = [batch_conv_output[j] for j in indices]
+        indices = list(indices)
+        imgs = [inputs[j] for j in indices]
+        conv_outputs = [batch_conv_output[k] for k in indices]
         np.savez(img_arrays_path, imgs=imgs, conv_outputs=conv_outputs)
+
+        # debug
+        # print(str(indices))
+        # print(str([labels[idx] for idx in indices]))
 
         # test after training
         acc_value = test_net(model, loss, test_data, test_label, config['batch_size'])

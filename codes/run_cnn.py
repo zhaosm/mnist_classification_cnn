@@ -52,6 +52,21 @@ current_iter_count = 0
 for epoch in range(config['max_epoch']):
     current_iter_count, loss_values = train_net(model, loss, config, train_data, train_label, config['batch_size'], config['disp_freq'], current_iter_count)
     log_list = log_list + loss_values
+    if epoch == config['max_epoch'] / 100 - 1 or epoch == config['max_epoch'] / 10 - 1 or epoch == config['max_epoch'] - 1:
+        inputs, labels = data_iterator(train_data, train_label, config['batch_size']).next()
+        model.forward(inputs)
+        batch_conv_output = model.layer_list[1]._forward_output
+        indices = set()
+        for i in range(len(labels)):
+            if labels[i] not in indices and len(indices) < img_record_num:
+                indices.add(i)
+            elif len(indices) == img_record_num:
+                break
+        indices = list(indices)
+        imgs = [inputs[j] for j in indices]
+        conv_outputs = [batch_conv_output[k] for k in indices]
+        np.savez('imgs_after_' + str(epoch + 1) + '_epochs.npz', imgs=imgs, conv_outputs=conv_outputs)
+
     if epoch == config['max_epoch'] - 1:
         # save conv + relu' s output
         inputs, labels = data_iterator(train_data, train_label, config['batch_size']).next()
@@ -68,11 +83,6 @@ for epoch in range(config['max_epoch']):
         conv_outputs = [batch_conv_output[k] for k in indices]
         np.savez(img_arrays_path, imgs=imgs, conv_outputs=conv_outputs)
 
-        # debug
-        # print(str(indices))
-        # print(str([labels[idx] for idx in indices]))
-
-        # test after training
         acc_value = test_net(model, loss, test_data, test_label, config['batch_size'])
 
 now = datetime.now()

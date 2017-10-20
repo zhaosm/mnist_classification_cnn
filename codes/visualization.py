@@ -27,7 +27,7 @@ def vis_square(data, path):
     plt.savefig(path)
     plt.axis('off')
 
-image_info = np.load(img_arrays_path)
+image_info = np.load('imgs_after_1_epochs.npz')
 images = image_info['imgs']
 images = images.reshape(images.shape[0], images.shape[2], images.shape[3])
 conv_outputs = image_info['conv_outputs']

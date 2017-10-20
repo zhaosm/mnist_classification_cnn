@@ -85,7 +85,7 @@ def avgpool2d_backward(input, input_all_channels_cols, grad_output, kernel_size,
 def get_im2col_indices(x_shape, field_height, field_width, padding=1, stride=1):
     """
     
-    :source code: https://github.com/huyouare/CS231n/blob/master/assignment2/cs231n/im2col.py
+    refer to: https://github.com/huyouare/CS231n/blob/master/assignment2/cs231n/im2col.py
     """
     # first figure out what the size of the output should be
     n, c, h, w = x_shape
@@ -110,7 +110,7 @@ def im2col_indices(x, field_height, field_width, padding=1, stride=1):
     """ 
       
         An implementation of im2col based on some fancy indexing
-        source code: https://github.com/huyouare/CS231n/blob/master/assignment2/cs231n/im2col.py
+        refer to: https://github.com/huyouare/CS231n/blob/master/assignment2/cs231n/im2col.py
     """
     # Zero-pad the input
     p = padding
@@ -128,7 +128,7 @@ def col2im_indices(cols, x_shape, field_height=3, field_width=3, padding=1, stri
     """ 
     
         An implementation of col2im based on fancy indexing and np.add.at
-        source code: https://github.com/huyouare/CS231n/blob/master/assignment2/cs231n/im2col.py
+        refer to: https://github.com/huyouare/CS231n/blob/master/assignment2/cs231n/im2col.py
     """
     N, C, H, W = x_shape
     H_padded, W_padded = H + 2 * padding, W + 2 * padding

@@ -1,12 +1,15 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from output_paths import img_arrays_path
+
+img_path_prefixes = ['imgs_after_1_epochs']  # , 'imgs_after_10_epochs', 'imgs_after_100_epochs']
 
 
 def vis_square(data, path):
-    """Take an array of shape (n, height, width) or (n, height, width, 3)
-       and visualize each (height, width) thing in a grid of size approx. sqrt(n) by sqrt(n)
-       source code: http://nbviewer.jupyter.org/github/BVLC/caffe/blob/master/examples/00-classification.ipynb
+    """
+    
+        Take an array of shape (n, height, width) or (n, height, width, 3)
+        and visualize each (height, width) thing in a grid of size approx. sqrt(n) by sqrt(n)
+        refer to: http://nbviewer.jupyter.org/github/BVLC/caffe/blob/master/examples/00-classification.ipynb
     """
 
     # normalize data for display
@@ -27,12 +30,17 @@ def vis_square(data, path):
     plt.savefig(path)
     plt.axis('off')
 
-image_info = np.load('imgs_after_1_epochs.npz')
-images = image_info['imgs']
-images = images.reshape(images.shape[0], images.shape[2], images.shape[3])
-conv_outputs = image_info['conv_outputs']
-conv_outputs = conv_outputs.transpose(0, 2, 3, 1)
-vis_square(images, 'origin_images.png')
-plt.gcf().clear()
-vis_square(conv_outputs, 'after_conv.png')
-print('finished. ')
+for img_path_prefix in img_path_prefixes:
+    img_info = np.load(img_path_prefix + '.npz')
+    imgs = img_info['imgs']
+    imgs = imgs.reshape(imgs.shape[0], imgs.shape[2], imgs.shape[3])
+    conv1_outputs = img_info['conv1_outputs']
+    conv1_outputs = conv1_outputs.transpose(0, 2, 3, 1)
+    conv2_outputs = img_info['conv2_outputs']
+    conv2_outputs = conv2_outputs.transpose(0, 2, 3, 1)
+    plt.gcf().clear()
+    vis_square(imgs, img_path_prefix + '_origin.png')
+    plt.gcf().clear()
+    vis_square(conv1_outputs, img_path_prefix + '_after_conv1.png')
+    plt.gcf().clear()
+    vis_square(conv2_outputs, img_path_prefix + '_after_conv2.png')

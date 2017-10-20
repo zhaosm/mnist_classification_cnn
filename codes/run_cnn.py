@@ -12,6 +12,7 @@ from output_paths import *
 
 train_data, test_data, train_label, test_label = load_mnist_4d('data')
 img_record_num = 4
+save_parameters = True
 
 # Your model defintion here
 # You should explore different model architecture
@@ -55,35 +56,31 @@ for epoch in range(config['max_epoch']):
     if epoch == config['max_epoch'] / 100 - 1 or epoch == config['max_epoch'] / 10 - 1 or epoch == config['max_epoch'] - 1:
         inputs, labels = data_iterator(train_data, train_label, config['batch_size']).next()
         model.forward(inputs)
-        batch_conv_output = model.layer_list[1]._forward_output
-        indices = set()
+        batch_conv1_output = model.layer_list[1]._forward_output
+        batch_conv2_output = model.layer_list[4]._forward_output
+        indices = []
+        labels_set = set()
         for i in range(len(labels)):
-            if labels[i] not in indices and len(indices) < img_record_num:
-                indices.add(i)
+            if labels[i] not in labels_set and len(indices) < img_record_num:
+                labels_set.add(labels[i])
+                indices.append(i)
             elif len(indices) == img_record_num:
                 break
-        indices = list(indices)
+        # debug
+        print(str(indices))
+        print(str([labels[i] for i in indices]))
         imgs = [inputs[j] for j in indices]
-        conv_outputs = [batch_conv_output[k] for k in indices]
-        np.savez('imgs_after_' + str(epoch + 1) + '_epochs.npz', imgs=imgs, conv_outputs=conv_outputs)
+        conv1_outputs = [batch_conv1_output[k] for k in indices]
+        conv2_outputs = [batch_conv2_output[l] for l in indices]
+        np.savez('imgs_after_' + str(epoch + 1) + '_epochs.npz', imgs=imgs, conv1_outputs=conv1_outputs, conv2_outputs=conv2_outputs)
 
     if epoch == config['max_epoch'] - 1:
-        # save conv + relu' s output
-        inputs, labels = data_iterator(train_data, train_label, config['batch_size']).next()
-        model.forward(inputs)
-        batch_conv_output = model.layer_list[1]._forward_output
-        indices = set()
-        for i in range(len(labels)):
-            if labels[i] not in indices and len(indices) < img_record_num:
-                indices.add(i)
-            elif len(indices) == img_record_num:
-                break
-        indices = list(indices)
-        imgs = [inputs[j] for j in indices]
-        conv_outputs = [batch_conv_output[k] for k in indices]
-        np.savez(img_arrays_path, imgs=imgs, conv_outputs=conv_outputs)
-
+        # accuracy on testset
         acc_value = test_net(model, loss, test_data, test_label, config['batch_size'])
+
+        # save parameters
+        if save_parameters:
+            np.savez('parameters.npz', conv1_w=model.layer_list[0].W, conv1_b=model.layer_list[0].b, conv2_w=model.layer_list[0].W, conv2_b=model.layer_list[0].b, fc3_w=model.layer_list[-1].W, fc3_b=model.layer_list[-1].b)
 
 now = datetime.now()
 display_now = str(now).split(' ')[1][:-3]

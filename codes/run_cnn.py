@@ -13,6 +13,7 @@ from output_paths import *
 train_data, test_data, train_label, test_label = load_mnist_4d('data')
 img_record_num = 4
 save_parameters = True
+use_parameters = False
 
 # Your model defintion here
 # You should explore different model architecture
@@ -50,6 +51,19 @@ log_list = []
 current_iter_count = 0
 
 
+# try
+if use_parameters:
+    parameters = np.load('parameters.npz')
+    model.layer_list[0].W = parameters['conv1_w']
+    model.layer_list[0].b = parameters['conv1_b']
+    model.layer_list[3].W = parameters['conv2_w']
+    model.layer_list[3].b = parameters['conv2_b']
+    model.layer_list[-1].W = parameters['fc3_w']
+    model.layer_list[-1].b = parameters['fc3_b']
+    acc_value = test_net(model, loss, test_data, test_label, config['batch_size'])
+    print('acc = ' + str(acc_value))
+
+
 for epoch in range(config['max_epoch']):
     current_iter_count, loss_values = train_net(model, loss, config, train_data, train_label, config['batch_size'], config['disp_freq'], current_iter_count)
     log_list = log_list + loss_values
@@ -80,7 +94,7 @@ for epoch in range(config['max_epoch']):
 
         # save parameters
         if save_parameters:
-            np.savez('parameters.npz', conv1_w=model.layer_list[0].W, conv1_b=model.layer_list[0].b, conv2_w=model.layer_list[0].W, conv2_b=model.layer_list[0].b, fc3_w=model.layer_list[-1].W, fc3_b=model.layer_list[-1].b)
+            np.savez('parameters.npz', conv1_w=model.layer_list[0].W, conv1_b=model.layer_list[0].b, conv2_w=model.layer_list[3].W, conv2_b=model.layer_list[3].b, fc3_w=model.layer_list[-1].W, fc3_b=model.layer_list[-1].b)
 
 now = datetime.now()
 display_now = str(now).split(' ')[1][:-3]

@@ -1,5 +1,5 @@
 import numpy as np
-from functions import conv2d_forward, conv2d_backward, avgpool2d_forward, avgpool2d_backward, im2col_indices
+from functions import conv2d_forward, conv2d_backward, avgpool2d_forward, avgpool2d_backward
 
 
 class Layer(object):
@@ -27,8 +27,7 @@ class Relu(Layer):
 
     def forward(self, input):
         self._saved_for_backward(input)
-        self._forward_output = np.maximum(0, input)
-        return self._forward_output
+        return np.maximum(0, input)
 
     def backward(self, grad_output):
         input = self._saved_tensor
@@ -105,21 +104,20 @@ class Conv2D(Layer):
         super(Conv2D, self).__init__(name, trainable=True)
         self.kernel_size = kernel_size
         self.pad = pad
-        self.W = np.random.randn(out_channel, in_channel, kernel_size, kernel_size)
+        self.W = np.random.randn(out_channel, in_channel, kernel_size, kernel_size) * init_std
         self.b = np.zeros(out_channel)
 
         self.diff_W = np.zeros(self.W.shape)
         self.diff_b = np.zeros(out_channel)
 
     def forward(self, input):
-        self._input_cols = im2col_indices(x=input, field_height=self.kernel_size, field_width=self.kernel_size, padding=self.pad, stride=1)
         self._saved_for_backward(input)
-        output = conv2d_forward(input, self._input_cols, self.W, self.b, self.kernel_size, self.pad)
+        output = conv2d_forward(input, self.W, self.b, self.kernel_size, self.pad)
         return output
 
     def backward(self, grad_output):
         input = self._saved_tensor
-        grad_input, self.grad_W, self.grad_b = conv2d_backward(input, self._input_cols, grad_output, self.W, self.b, self.kernel_size, self.pad)
+        grad_input, self.grad_W, self.grad_b = conv2d_backward(input, grad_output, self.W, self.b, self.kernel_size, self.pad)
         return grad_input
 
     def update(self, config):
@@ -142,15 +140,10 @@ class AvgPool2D(Layer):
 
     def forward(self, input):
         self._saved_for_backward(input)
-        n, c_in, h_in, w_in = input.shape
-        assert (h_in + 2 * self.pad) % self.kernel_size == 0
-        assert (w_in + 2 * self.pad) % self.kernel_size == 0
-        input_all_channels = input.reshape(n * c_in, 1, h_in, w_in)
-        self._input_all_channels_cols = im2col_indices(input_all_channels, self.kernel_size, self.kernel_size, self.pad, self.kernel_size)
-        output = avgpool2d_forward(input, self._input_all_channels_cols, self.kernel_size, self.pad)
+        output = avgpool2d_forward(input, self.kernel_size, self.pad)
         return output
 
     def backward(self, grad_output):
         input = self._saved_tensor
-        grad_input = avgpool2d_backward(input, self._input_all_channels_cols, grad_output, self.kernel_size, self.pad)
+        grad_input = avgpool2d_backward(input, grad_output, self.kernel_size, self.pad)
         return grad_input

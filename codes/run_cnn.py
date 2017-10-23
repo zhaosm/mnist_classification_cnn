@@ -18,10 +18,10 @@ use_parameters = False
 # Your model defintion here
 # You should explore different model architecture
 model = Network()
-model.add(Conv2D('conv1', 1, 4, 3, 1, 0.01))
+model.add(Conv2D('conv1', 1, 4, 3, 1, 0.1))
 model.add(Relu('relu1'))
 model.add(AvgPool2D('pool1', 2, 0))  # output shape: N x 4 x 14 x 14
-model.add(Conv2D('conv2', 4, 4, 3, 1, 0.01))
+model.add(Conv2D('conv2', 4, 4, 3, 1, 0.1))
 model.add(Relu('relu2'))
 model.add(AvgPool2D('pool2', 2, 0))  # output shape: N x 4 x 7 x 7
 model.add(Reshape('flatten', (-1, 196)))
@@ -40,7 +40,7 @@ config = {
     'weight_decay': 0.0,
     'momentum': 0.9,
     'batch_size': 100,
-    'max_epoch': 1,
+    'max_epoch': 100,
     'disp_freq': 5,
     'test_epoch': 5
 }
@@ -64,26 +64,37 @@ if use_parameters:
     print('acc = ' + str(acc_value))
 
 
+record_inputs, record_labels = data_iterator(train_data, train_label, config['batch_size']).next()
+indices = []
+labels_set = set()
+for i in range(len(record_labels)):
+    if record_labels[i] not in labels_set and len(indices) < img_record_num:
+        labels_set.add(record_labels[i])
+        indices.append(i)
+    elif len(indices) == img_record_num:
+        break
+
+
 for epoch in range(config['max_epoch']):
     current_iter_count, loss_values = train_net(model, loss, config, train_data, train_label, config['batch_size'], config['disp_freq'], current_iter_count)
     log_list = log_list + loss_values
+    # debug
+    if epoch % 20 == 0:
+        print(str(loss_values[-1]))
+
     if epoch == config['max_epoch'] / 100 - 1 or epoch == config['max_epoch'] / 10 - 1 or epoch == config['max_epoch'] - 1:
-        inputs, labels = data_iterator(train_data, train_label, config['batch_size']).next()
-        model.forward(inputs)
-        batch_conv1_output = model.layer_list[1]._forward_output
-        batch_conv2_output = model.layer_list[4]._forward_output
-        indices = []
-        labels_set = set()
-        for i in range(len(labels)):
-            if labels[i] not in labels_set and len(indices) < img_record_num:
-                labels_set.add(labels[i])
-                indices.append(i)
-            elif len(indices) == img_record_num:
-                break
+        # record_inputs, record_labels = data_iterator(train_data, train_label, config['batch_size']).next()
+        output = record_inputs
+        for i in range(5):
+            output = model.layer_list[i].forward(output)
+            if i == 1:
+                batch_conv1_output = output
+            elif i == 4:
+                batch_conv2_output = output
         # debug
-        print(str(indices))
-        print(str([labels[i] for i in indices]))
-        imgs = [inputs[j] for j in indices]
+        # print(str(indices))
+        # print(str([labels[i] for i in indices]))
+        imgs = [record_inputs[j] for j in indices]
         conv1_outputs = [batch_conv1_output[k] for k in indices]
         conv2_outputs = [batch_conv2_output[l] for l in indices]
         np.savez('imgs_after_' + str(epoch + 1) + '_epochs.npz', imgs=imgs, conv1_outputs=conv1_outputs, conv2_outputs=conv2_outputs)

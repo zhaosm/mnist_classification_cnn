@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def conv2d_forward(input, input_cols, W, b, kernel_size, pad):
+def conv2d_forward(input, W, b, kernel_size, pad):
     '''
     Args:
         input: shape = n (#sample) x c_in (#input channel) x h_in (#height) x w_in (#width)
@@ -14,14 +14,17 @@ def conv2d_forward(input, input_cols, W, b, kernel_size, pad):
         input_cols, output: shape = n (#sample) x c_out (#output channel) x h_out x w_out,
             where h_out, w_out is the height and width of output, after convolution
     '''
+    input_cols = im2col_indices(x=input, field_height=kernel_size, field_width=kernel_size, padding=pad,stride=1)  # (c_in * kernel_size * kernel_size) * (h_out * w_out * n)
     n, h, w = input.shape[0], input.shape[2], input.shape[3]
+    h_out = h + 2 * pad - kernel_size + 1
+    w_out = w + 2 * pad - kernel_size + 1
     c_out, c_in = W.shape[0], W.shape[1]
-    temp = np.dot(W.reshape(c_out, -1), input_cols)  # c_out * (h_out * w_out * N)
+    temp = np.dot(W.reshape(c_out, -1), input_cols)
     temp = temp + b.reshape(-1, 1)
-    return temp.reshape(c_out, h, w, n).transpose(3, 0, 1, 2)  # n * c_out * h_out * w_out
+    return temp.reshape(c_out, h_out, w_out, n).transpose(3, 0, 1, 2)
 
 
-def conv2d_backward(input, input_cols, grad_output, W, b, kernel_size, pad):
+def conv2d_backward(input, grad_output, W, b, kernel_size, pad):
     '''
     Args:
         input: shape = n (#sample) x c_in (#input channel) x h_in (#height) x w_in (#width)
@@ -35,18 +38,21 @@ def conv2d_backward(input, input_cols, grad_output, W, b, kernel_size, pad):
         grad_W: gradient of W, shape = c_out (#output channel) x c_in (#input channel) x k (#kernel_size) x k (#kernel_size)
         grad_b: gradient of b, shape = c_out
     '''
+    input_cols = im2col_indices(x=input, field_height=kernel_size, field_width=kernel_size, padding=pad, stride=1)
     c_out = grad_output.shape[1]
-    grad_output_filters = grad_output.transpose(1, 2, 3, 0).reshape(c_out, -1)
-    grad_w = np.matmul(grad_output_filters, input_cols.T)
+    grad_output_filters = grad_output.transpose(1, 2, 3, 0).reshape(c_out, -1)  # inverse process for transpose and reshape in forward
+    grad_w = np.matmul(grad_output_filters, input_cols.T)  # same as linear layer's backward
     grad_w = grad_w.reshape(W.shape)
-    grad_input_cols = np.matmul(W.reshape(c_out, -1).T, grad_output_filters)
-    grad_input = col2im_indices(cols=grad_input_cols, x_shape=input.shape, field_height=kernel_size, field_width=kernel_size, padding=pad, stride=1)  # back to input size
-    grad_b = np.sum(grad_output, axis=(0, 2, 3)).reshape(c_out, -1)
+
+    grad_input_cols = np.matmul(W.reshape(c_out, -1).T, grad_output_filters)  # same as linear's backward
+    grad_input = col2im_indices(cols=grad_input_cols, x_shape=input.shape, field_height=kernel_size,
+                                field_width=kernel_size, padding=pad, stride=1)  # calculate gradient for input by summing corresponding gradients in input_cols_grad
+    grad_b = np.sum(grad_output, axis=(0, 2, 3))  # sum on axis except c_out
 
     return grad_input, grad_w, grad_b.ravel()
 
 
-def avgpool2d_forward(input, input_all_channels_cols, kernel_size, pad):
+def avgpool2d_forward(input, kernel_size, pad):
     '''
     Args:
         input: shape = n (#sample) x c_in (#input channel) x h_in (#height) x w_in (#width)
@@ -58,12 +64,16 @@ def avgpool2d_forward(input, input_all_channels_cols, kernel_size, pad):
             where h_out, w_out is the height and width of output, after average pooling over input
     '''
     n, c_in, h_in, w_in = input.shape
+    assert (h_in + 2 * pad) % kernel_size == 0
+    assert (w_in + 2 * pad) % kernel_size == 0
+    input_all_channels = input.reshape(n * c_in, 1, h_in, w_in)
+    input_all_channels_cols = im2col_indices(input_all_channels, kernel_size, kernel_size, pad, kernel_size)  # (1 * kernel_size * kernel_size) * (h_out * w_out * (n * c_in))
     h_out = (h_in + 2 * pad) / kernel_size
     w_out = (w_in + 2 * pad) / kernel_size
     return np.mean(input_all_channels_cols, axis=0).reshape(h_out, w_out, n, c_in).transpose(2, 3, 0, 1)
 
 
-def avgpool2d_backward(input, input_all_channels_cols, grad_output, kernel_size, pad):
+def avgpool2d_backward(input, grad_output, kernel_size, pad):
     '''
     Args:
         input: shape = n (#sample) x c_in (#input channel) x h_in (#height) x w_in (#width)
@@ -75,16 +85,17 @@ def avgpool2d_backward(input, input_all_channels_cols, grad_output, kernel_size,
         grad_input: gradient of input, shape = n (#sample) x c_in (#input channel) x h_in (#height) x w_in (#width)
     '''
     n, c_in, h_in, w_in = input.shape
-    avgpool_output = grad_output.transpose(2, 3, 0, 1).ravel()
-    input_grad_cols = np.zeros_like(input_all_channels_cols)
-    input_grad_cols[:, range(avgpool_output.size)] = 1. / kernel_size * avgpool_output
-    input_grad = col2im_indices(input_grad_cols, (n * c_in, 1, h_in, w_in), kernel_size, kernel_size, padding=pad, stride=kernel_size)
+    assert (h_in + 2 * pad) % kernel_size == 0
+    assert (w_in + 2 * pad) % kernel_size == 0
+    avgpool_output = grad_output.transpose(2, 3, 0, 1).ravel()  # inverse process for transpose and reshape in forward
+    input_cols_grad = np.tile(avgpool_output, (kernel_size * kernel_size, 1)) / kernel_size
+    input_grad = col2im_indices(input_cols_grad, (n * c_in, 1, h_in, w_in), kernel_size, kernel_size, padding=pad, stride=kernel_size)
     return input_grad.reshape(input.shape)
 
 
 def get_im2col_indices(x_shape, field_height, field_width, padding=1, stride=1):
     """
-    
+
     refer to: https://github.com/huyouare/CS231n/blob/master/assignment2/cs231n/im2col.py
     """
     # first figure out what the size of the output should be
@@ -108,7 +119,7 @@ def get_im2col_indices(x_shape, field_height, field_width, padding=1, stride=1):
 
 def im2col_indices(x, field_height, field_width, padding=1, stride=1):
     """ 
-      
+
         An implementation of im2col based on some fancy indexing
         refer to: https://github.com/huyouare/CS231n/blob/master/assignment2/cs231n/im2col.py
     """
@@ -120,13 +131,14 @@ def im2col_indices(x, field_height, field_width, padding=1, stride=1):
 
     cols = x_padded[:, k, i, j]
     C = x.shape[1]
-    cols = cols.transpose(1, 2, 0).reshape(field_height * field_width * C, -1)
-    return cols  # each img is a col
+    cols = cols.transpose(1, 2, 0)
+    cols = cols.reshape(field_height * field_width * C, -1)
+    return cols
 
 
 def col2im_indices(cols, x_shape, field_height=3, field_width=3, padding=1, stride=1):
     """ 
-    
+
         An implementation of col2im based on fancy indexing and np.add.at
         refer to: https://github.com/huyouare/CS231n/blob/master/assignment2/cs231n/im2col.py
     """
@@ -134,12 +146,10 @@ def col2im_indices(cols, x_shape, field_height=3, field_width=3, padding=1, stri
     H_padded, W_padded = H + 2 * padding, W + 2 * padding
     x_padded = np.zeros((N, C, H_padded, W_padded), dtype=cols.dtype)
     k, i, j = get_im2col_indices(x_shape, field_height, field_width, padding,
-                               stride)
+                                 stride)
     cols_reshaped = cols.reshape(C * field_height * field_width, -1, N)
     cols_reshaped = cols_reshaped.transpose(2, 0, 1)
     np.add.at(x_padded, (slice(None), k, i, j), cols_reshaped)
     if padding == 0:
         return x_padded
     return x_padded[:, :, padding:-padding, padding:-padding]
-
-

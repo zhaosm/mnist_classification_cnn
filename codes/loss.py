@@ -23,7 +23,8 @@ class SoftmaxCrossEntropyLoss(object):
         sum_vector = np.sum(exp_vector, axis=1)
         self._p_vector = exp_vector / (sum_vector.reshape(-1, 1))
         ln_p_vector = np.log(self._p_vector)
-        return -np.mean(target * ln_p_vector)
+        result = -np.sum(target * ln_p_vector) / input.shape[0]
+        return result
 
     def backward(self, input, target):
         '''Your codes here'''

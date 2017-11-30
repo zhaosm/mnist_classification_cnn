@@ -1,7 +1,6 @@
 from network import Network
 from layers import Relu, Linear, Conv2D, AvgPool2D, Reshape
-from utils import LOG_INFO
-from loss import EuclideanLoss, SoftmaxCrossEntropyLoss
+from loss import SoftmaxCrossEntropyLoss
 from solve_net import train_net, test_net
 from load_data import load_mnist_4d
 from datetime import datetime
@@ -14,6 +13,7 @@ train_data, test_data, train_label, test_label = load_mnist_4d('data')
 img_record_num = 4
 save_parameters = True
 use_parameters = False
+logpath = 'output.csv'
 
 # Your model defintion here
 # You should explore different model architecture
@@ -40,7 +40,7 @@ config = {
     'weight_decay': 0.0,
     'momentum': 0.9,
     'batch_size': 100,
-    'max_epoch': 100,
+    'max_epoch': 1,
     'disp_freq': 5,
     'test_epoch': 5
 }
@@ -79,8 +79,8 @@ for epoch in range(config['max_epoch']):
     current_iter_count, loss_values = train_net(model, loss, config, train_data, train_label, config['batch_size'], config['disp_freq'], current_iter_count)
     log_list = log_list + loss_values
     # debug
-    if epoch % 20 == 0:
-        print(str(loss_values[-1]))
+    # if epoch % 20 == 0:
+    #     print(str(loss_values[-1]))
 
     if epoch == config['max_epoch'] / 100 - 1 or epoch == config['max_epoch'] / 10 - 1 or epoch == config['max_epoch'] - 1:
         # record_inputs, record_labels = data_iterator(train_data, train_label, config['batch_size']).next()

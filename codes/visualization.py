@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-img_path_prefixes = ['imgs_after_1_epochs']#  , 'imgs_after_10_epochs', 'imgs_after_100_epochs']
+img_path_prefixes = ['imgs_after_1_epochs', 'imgs_after_10_epochs', 'imgs_after_100_epochs']
 
 
 def vis_square(data, path):

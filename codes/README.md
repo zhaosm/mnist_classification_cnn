@@ -1,7 +1,11 @@
 采用cnn对mnist数据集进行分类
+
 实现了卷积及平均池画的中正向传播与反向传播。实现了交叉熵损失函数。
-1.修改了run_cnn.py、solve_net.py中train_net和test_net函数，以便记录训练过程中的loss及准确率。要向train_net传入当前已经迭代的次数，train_net会返回经过一个epoch后的总迭代次数及每disp_freq的平均loss值。
-2.可在output_paths.py中修改记录loss值的文件路径。
-3.run_cnn.py中save_parameters设为true会保存所有的W矩阵和b向量的值，use_parameters可使用保存的parameters继续训练。
-3.visualization.py用于可视化，会分别可视化一张图片在1、10、100个epochs后经过一、二层卷积的输出结果。
-4.plot用于绘制loss曲线。将plot_single设为true会只绘制cnn的loss曲线，否则绘制cnn和mlp两者的（cnn的loss记录文件应为output_cnn.csv，mlp的应为output_mlp.csv）。
+
+可在output_paths.py中修改记录loss值的文件路径。
+
+run_cnn.py中save_parameters设为true会保存所有的W矩阵和b向量的值，use_parameters可使用保存的parameters继续训练。
+
+visualization.py用于可视化，会分别可视化一张图片在1、10、100个epochs后经过一、二层卷积的输出结果。
+
+plot用于绘制loss曲线。将plot_single设为true会只绘制cnn的loss曲线，否则绘制cnn和mlp两者的（cnn的loss记录文件应为output_cnn.csv，mlp的应为output_mlp.csv）。
